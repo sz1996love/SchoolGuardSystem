@@ -44,14 +44,16 @@ public class dbTools {
 		}
 	}
 
-	public String getMessage(String id, String name) {
+	public String getMessage(String message) {
 		dbTools dbUtil = new dbTools();
+		Gson gson = new Gson();
 		Map<String, Object> map = new HashMap<>();
 		Map<String, Object> temping = new HashMap<String, Object>();
+		Map<String, String> temp = gson.fromJson(message, new TypeToken<HashMap<String, String>>() {
+		}.getType());
 		String json = "";
-		String p = dbUtil.getParent(id);
-		String b = dbUtil.getBlacklist(id);
-		Gson gson = new Gson();
+		String p = dbUtil.getParent(temp.get("id"));
+		String b = dbUtil.getBlacklist(temp.get("id"));
 		if (!p.equals("{}")) {
 			return p;
 		}
@@ -59,8 +61,8 @@ public class dbTools {
 			return b;
 		} else {
 			temping.put("identity", "noresult");
-			map.put("id", id);
-			map.put("name", name);
+			map.put("id", temp.get("id"));
+			map.put("name", temp.get("name"));
 			temping.put("message", map);
 		}
 		json = gson.toJson(temping);
