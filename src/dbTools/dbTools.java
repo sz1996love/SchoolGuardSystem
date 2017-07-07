@@ -234,7 +234,7 @@ public class dbTools {
 			String sql = "insert into schoolsys.record (name,identity,status,pic,sid,tid,time,pid) values(?,?,?,?,?,?,now(),?)";
 			conn = dbTools.getConn();
 			ps = conn.prepareStatement(sql);
-			if (!map.get("name").equals("") && !map.get("identity").equals("")) {
+			if (!map.get("name").equals(null) && !map.get("identity").equals(null)) {
 				ps.setString(1, map.get("name"));
 				ps.setString(2, map.get("identity"));
 				ps.setString(3, map.get("status"));
@@ -266,7 +266,7 @@ public class dbTools {
 		String json = "";
 		Map<String, Object> resultMap = new HashMap<String, Object>();
 		try {
-			String sql = "SELECT id,name,identity,status,sname,wname,time FROM schoolsys.record left join worker on record.tid=worker.wid left join student on record.sid=student.sid; ;";
+			String sql = "SELECT id,name,identity,status,sname,wname,time FROM schoolsys.record left join worker on record.tid=worker.wid left join student on record.sid=student.sid;";
 			conn = dbTools.getConn();
 			ps = conn.prepareStatement(sql);
 			rs = ps.executeQuery();
@@ -453,6 +453,32 @@ public class dbTools {
 		dbTools.closeConn(conn);
 		return json;
 	}
+	
+	public String  setOeder(String message){
+		Connection conn = null;
+		PreparedStatement ps = null;
+		Gson gson = new Gson();
+		String json = "";
+		Map<String, Object> resultMap = new HashMap<String, Object>();
+		try {
+			Map<String, String> map = gson.fromJson(message, new TypeToken<HashMap<String, String>>() {
+			}.getType());
+			String sql = "update schoolsys.parent set isordered=? where id=?";
+			conn = dbTools.getConn();
+			ps = conn.prepareStatement(sql);
+			ps.setString(1, map.get("order"));
+			ps.setString(2, map.get("id"));
+			ps.executeUpdate();
+			resultMap.put("message", "ok");
+			json = gson.toJson(resultMap);
+		} catch (Exception e) {
+			e.printStackTrace();
+			resultMap.put("message", "fail");
+			json = gson.toJson(resultMap);
+		}
+		dbTools.closeConn(conn);
+		return json;
+	}
 
 	public String parentCome(String identity, String id, String imgnow) {// 判断家长是否能进入学校
 		Connection conn = null;
@@ -602,6 +628,67 @@ public class dbTools {
 		dbTools.closeConn(conn);
 		return json;
 	}
+	public String  getSid(String name) {
+		Connection conn = null;
+		PreparedStatement ps = null;
+		ResultSet rs = null;
+		String sid=null;
+		try {
+			String sql = "select sid from schoolsys.student where sname=?";
+			conn = dbTools.getConn();
+			ps = conn.prepareStatement(sql);
+			ps.setString(1, name);
+			rs = ps.executeQuery();
+			while (rs.next()) {
+				sid=rs.getString("sid");			
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		dbTools.closeConn(conn);
+		return sid;
+	}
+	
+	public String  getTid(String name) {
+		Connection conn = null;
+		PreparedStatement ps = null;
+		ResultSet rs = null;
+		String wid=null;
+		try {
+			String sql = "select wid from schoolsys.worker where wname=?";
+			conn = dbTools.getConn();
+			ps = conn.prepareStatement(sql);
+			ps.setString(1, name);
+			rs = ps.executeQuery();
+			while (rs.next()) {
+				wid=rs.getString("wid");			
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		dbTools.closeConn(conn);
+		return wid;
+	}
+	public String getBlacklistName(String id) {
+		Connection conn = null;
+		PreparedStatement ps = null;
+		ResultSet rs = null;
+		String name=null;
+		try {
+			String sql = "select name from schoolsys.blacklist where id=?";
+			conn = dbTools.getConn();
+			ps = conn.prepareStatement(sql);
+			ps.setString(1, id);
+			rs = ps.executeQuery();
+			while (rs.next()) {
+				name=rs.getString("name");			
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		dbTools.closeConn(conn);
+		return name;
+	}
 
 	public String allowedPeople(String message) {// 处理模块总方法直接调用即可
 		Gson gson = new Gson();
@@ -609,13 +696,114 @@ public class dbTools {
 		Map<String, String> map = gson.fromJson(message, new TypeToken<HashMap<String, String>>() {
 		}.getType());
 		if (map.get("identity").equals("student")) {
-			return db.studentCome(map.get("identity"), map.get("id"), map.get("imgnow"));
+			String str= db.studentCome(map.get("identity"), map.get("id"), map.get("imgnow"));
+			Map<String, Object> temp = gson.fromJson(str, new TypeToken<HashMap<String, Object>>() {
+			}.getType());
+			if (temp.get("result").equals("allowed")) {
+				Map<String , Object> temp1=new HashMap<String, Object>();
+				Map<String , Object> temp2=new HashMap<String, Object>();
+				temp1.put("id", ((Map<String, String>)temp.get("details")).get("id"));
+				temp1.put("identity", "student");
+				temp1.put("status", "N");
+				temp2.put("name", ((Map<String, String>)temp.get("details")).get("name"));
+				temp2.put("id", ((Map<String, String>)temp.get("details")).get("id"));
+				temp2.put("identity", "student");
+				temp2.put("status", "allowed");
+				temp2.put("sid", null);
+				temp2.put("tid", null);
+				temp2.put("date", "1");
+				temp2.put("pic", ((Map<String, String>)temp.get("details")).get("imglog"));
+				String jsons=gson.toJson(temp1);
+				String jsons1=gson.toJson(temp2);
+				db.setScPeopleStay(jsons);
+				db.addNewRecord(jsons1);
+			}else if (temp.get("result").equals("notallowed")) {
+				Map<String , Object> temp2=new HashMap<String, Object>();
+				temp2.put("name", ((Map<String, String>)temp.get("details")).get("name"));
+				temp2.put("id",((Map<String, String>)temp.get("details")).get("id"));
+				temp2.put("identity","student");
+				temp2.put("status", "notallowed");
+				temp2.put("sid", null);
+				temp2.put("tid", null);
+				temp2.put("date", "1");
+				temp2.put("pic", ((Map<String, String>)temp.get("details")).get("imglog"));
+				String jsons=gson.toJson(temp2);
+				db.addNewRecord(jsons);
+			}
+			return str;
 		} else if (map.get("identity").equals("parent")) {
-			return db.parentCome(map.get("identity"), map.get("id"), map.get("imgnow"));
+			String str= db.parentCome(map.get("identity"), map.get("id"), map.get("imgnow"));
+			Map<String, Object> temp = gson.fromJson(str, new TypeToken<HashMap<String, Object>>() {
+			}.getType());
+			if (temp.get("result").equals("allowed")) {
+				Map<String , Object> temp1=new HashMap<String, Object>();
+				Map<String , Object> temp2=new HashMap<String, Object>();
+				Map<String , Object> temp3=new HashMap<String, Object>();
+				temp1.put("id", ((Map<String, String>)temp.get("details")).get("id"));
+				temp1.put("identity", "parent");
+				temp1.put("status", "Y");
+				temp2.put("name", ((Map<String, String>)temp.get("details")).get("name"));
+				temp2.put("id", ((Map<String, String>)temp.get("details")).get("id"));
+				temp2.put("identity", "parent");
+				temp2.put("status", "allowed");
+				temp2.put("sid", db.getSid(((Map<String, String>)temp.get("details")).get("stuName")));
+				temp2.put("tid", db.getTid(((Map<String, String>)temp.get("details")).get("teacherName")));
+				temp2.put("date", "1");
+				temp2.put("pic", ((Map<String, String>)temp.get("details")).get("imglog"));
+				temp3.put("id",  ((Map<String, String>)temp.get("details")).get("id"));
+				temp3.put("order", "N");
+				String jsons=gson.toJson(temp1);
+				String jsons1=gson.toJson(temp2);
+				String json2=gson.toJson(temp3);
+				db.setScPeopleStay(jsons);
+				db.addNewRecord(jsons1);
+				db.setOeder(json2);
+			}else if (temp.get("result").equals("notallowed")) {
+				Map<String , Object> temp2=new HashMap<String, Object>();
+				temp2.put("name", ((Map<String, String>)temp.get("details")).get("name"));
+				temp2.put("id", ((Map<String, String>)temp.get("details")).get("id"));
+				temp2.put("identity", "parent");
+				temp2.put("status", "notallowed");
+				temp2.put("sid", db.getSid(((Map<String, String>)temp.get("details")).get("stuName")));
+				temp2.put("tid", db.getTid(((Map<String, String>)temp.get("details")).get("teacherName")));
+				temp2.put("date", "1");
+				temp2.put("pic", ((Map<String, String>)temp.get("details")).get("imglog"));
+				String jsons1=gson.toJson(temp2);
+				db.addNewRecord(jsons1);
+			}
+			return str;
 		} else if (map.get("identity").equals("blacklist")) {
-			return db.refuseBlackList(map.get("identity"), map.get("id"), map.get("imgnow"));
+			String str= db.refuseBlackList(map.get("identity"), map.get("id"), map.get("imgnow"));
+			Map<String, Object> temp = gson.fromJson(str, new TypeToken<HashMap<String, Object>>() {
+			}.getType());
+			Map<String , Object> temp2=new HashMap<String, Object>();
+			temp2.put("name", db.getBlacklistName(((Map<String, String>)temp.get("details")).get("id")));
+			temp2.put("id", ((Map<String, String>)temp.get("details")).get("id"));
+			temp2.put("identity", "blacklist");
+			temp2.put("status", "notallowed");
+			temp2.put("sid", null);
+			temp2.put("tid", null);
+			temp2.put("date", "1");
+			temp2.put("pic", ((Map<String, String>)temp.get("details")).get("id"));
+			String jsons1=gson.toJson(temp2);
+			db.addNewRecord(jsons1);
+			return str;
 		} else {
-			return db.workerCome(map.get("identity"), map.get("id"), map.get("imgnow"));
+			String str= db.workerCome(map.get("identity"), map.get("id"), map.get("imgnow"));
+			Map<String, Object> temp = gson.fromJson(str, new TypeToken<HashMap<String, Object>>() {
+			}.getType());
+			Map<String , Object> temp2=new HashMap<String, Object>();
+			temp2.put("name", ((Map<String, String>)temp.get("details")).get("name"));
+			temp2.put("id", ((Map<String, String>)temp.get("details")).get("id"));
+			temp2.put("identity", "worker");
+			temp2.put("status", "allowed");
+			temp2.put("sid", null);
+			temp2.put("tid", null);
+			temp2.put("date", "1");
+			temp2.put("pic", ((Map<String, String>)temp.get("details")).get("imglog"));
+			String jsons1=gson.toJson(temp2);
+			db.addNewRecord(jsons1);
+			return str;
 		}
 	}
 
@@ -649,17 +837,14 @@ public class dbTools {
 		}
 	}
 
-//	public static void main(String[] args) {
-//		Map<String, Object> map = new HashMap<String, Object>();
-//		map.put("name", "5165");
-//		 map.put("identity", "student");
-//		 map.put("status", "allowed");
-//		 map.put("sid", "201400300001");
-//		 map.put("pic", "sadasfsdvfsdbfdgbh");
-//		map.put("id", "516516516");
-//		Gson gson = new Gson();
-//		String json = gson.toJson(map);
-//		dbTools db = new dbTools();
-//		System.out.println(db.getRecordDetailById("001"));
-//	}
+	public static void main(String[] args) {
+		Map<String, Object> map = new HashMap<String, Object>();
+		map.put("identity", "worker");
+		map.put("id", "001");
+		map.put("imgnow", "456sadasdasdvsv");
+		Gson gson = new Gson();
+		String json = gson.toJson(map);
+		dbTools db = new dbTools();
+		System.out.println(db.allowedPeople(json));
+	}
 }
