@@ -436,11 +436,19 @@ public class dbTools {
 			ps.setString(1, map.get("id"));
 			rs = ps.executeQuery();
 			if (rs.next()) {
-				ps = conn.prepareStatement(sql);
-				ps.setString(1, map.get("status"));
-				ps.setString(2, map.get("id"));
-				ps.executeUpdate();
-				resultMap.put("message", "ok");
+				if (rs.getString("isschool").equals("Y")) {
+					ps = conn.prepareStatement(sql);
+					ps.setString(1, "N");
+					ps.setString(2, map.get("id"));
+					ps.executeUpdate();
+					resultMap.put("message", "ok");
+				}else {
+					ps = conn.prepareStatement(sql);
+					ps.setString(1, "Y");
+					ps.setString(2, map.get("id"));
+					ps.executeUpdate();
+					resultMap.put("message", "ok");
+				}
 			} else {
 				resultMap.put("message", "fail");
 			}
@@ -701,10 +709,9 @@ public class dbTools {
 			}.getType());
 			if (temp.get("result").equals("allowed")) {
 				Map<String , Object> temp1=new HashMap<String, Object>();
-				Map<String , Object> temp2=new HashMap<String, Object>();
+				Map<String , Object> temp2=new HashMap<String, Object>();				
 				temp1.put("id", ((Map<String, String>)temp.get("details")).get("id"));
 				temp1.put("identity", "student");
-				temp1.put("status", "N");
 				temp2.put("name", ((Map<String, String>)temp.get("details")).get("name"));
 				temp2.put("id", ((Map<String, String>)temp.get("details")).get("id"));
 				temp2.put("identity", "student");
@@ -738,10 +745,8 @@ public class dbTools {
 			if (temp.get("result").equals("allowed")) {
 				Map<String , Object> temp1=new HashMap<String, Object>();
 				Map<String , Object> temp2=new HashMap<String, Object>();
-				Map<String , Object> temp3=new HashMap<String, Object>();
 				temp1.put("id", ((Map<String, String>)temp.get("details")).get("id"));
 				temp1.put("identity", "parent");
-				temp1.put("status", "Y");
 				temp2.put("name", ((Map<String, String>)temp.get("details")).get("name"));
 				temp2.put("id", ((Map<String, String>)temp.get("details")).get("id"));
 				temp2.put("identity", "parent");
@@ -750,14 +755,10 @@ public class dbTools {
 				temp2.put("tid", db.getTid(((Map<String, String>)temp.get("details")).get("teacherName")));
 				temp2.put("date", "1");
 				temp2.put("pic", ((Map<String, String>)temp.get("details")).get("imglog"));
-				temp3.put("id",  ((Map<String, String>)temp.get("details")).get("id"));
-				temp3.put("order", "N");
 				String jsons=gson.toJson(temp1);
 				String jsons1=gson.toJson(temp2);
-				String json2=gson.toJson(temp3);
 				db.setScPeopleStay(jsons);
 				db.addNewRecord(jsons1);
-				db.setOeder(json2);
 			}else if (temp.get("result").equals("notallowed")) {
 				Map<String , Object> temp2=new HashMap<String, Object>();
 				temp2.put("name", ((Map<String, String>)temp.get("details")).get("name"));
@@ -792,7 +793,10 @@ public class dbTools {
 			String str= db.workerCome(map.get("identity"), map.get("id"), map.get("imgnow"));
 			Map<String, Object> temp = gson.fromJson(str, new TypeToken<HashMap<String, Object>>() {
 			}.getType());
+			Map<String , Object> temp1=new HashMap<String, Object>();
 			Map<String , Object> temp2=new HashMap<String, Object>();
+			temp1.put("id", ((Map<String, String>)temp.get("details")).get("id"));
+			temp1.put("identity", "worker");
 			temp2.put("name", ((Map<String, String>)temp.get("details")).get("name"));
 			temp2.put("id", ((Map<String, String>)temp.get("details")).get("id"));
 			temp2.put("identity", "worker");
@@ -801,7 +805,9 @@ public class dbTools {
 			temp2.put("tid", null);
 			temp2.put("date", "1");
 			temp2.put("pic", ((Map<String, String>)temp.get("details")).get("imglog"));
+			String jsons=gson.toJson(temp1);
 			String jsons1=gson.toJson(temp2);
+			db.setScPeopleStay(jsons);
 			db.addNewRecord(jsons1);
 			return str;
 		}
@@ -837,14 +843,14 @@ public class dbTools {
 		}
 	}
 
-	public static void main(String[] args) {
-		Map<String, Object> map = new HashMap<String, Object>();
-		map.put("identity", "worker");
-		map.put("id", "001");
-		map.put("imgnow", "456sadasdasdvsv");
-		Gson gson = new Gson();
-		String json = gson.toJson(map);
-		dbTools db = new dbTools();
-		System.out.println(db.allowedPeople(json));
-	}
+//	public static void main(String[] args) {
+//		Map<String, Object> map = new HashMap<String, Object>();
+//		map.put("identity", "student");
+//		map.put("id", "201400300001");
+//		map.put("imgnow","dfdsfgsduifg");
+//		Gson gson = new Gson();
+//		String json = gson.toJson(map);
+//		dbTools db = new dbTools();
+//		System.out.println(db.allowedPeople(json));
+//	}
 }
